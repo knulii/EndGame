@@ -2,9 +2,9 @@
 
 #OPTIONS!
 
-MASTERONION="knuliiymaayvvdtpz35crg2gplguanhuytp5s7abilxi2h6kmsr5vfyd.onion"
-TORAUTHPASSWORD="pA3sw0Rd"
-BACKENDONIONURL="knuliiymaayvvdtpz35crg2gplguanhuytp5s7abilxi2h6kmsr5vfyd.onion"
+MASTERONION="djroez6ke2mk44nqjtsny4gbbusrzjdq3ogxquwnbazjp43on5goq4yd.onion"
+TORAUTHPASSWORD="r2765347"
+BACKENDONIONURL="sun5h5eofekturbhrydsiyegevvo7macql2pezlb4cadgymi6h2svyad.onion"
 
 #set to true if you want to setup local proxy instead of proxy over Tor
 LOCALPROXY=false
@@ -134,16 +134,15 @@ sed -i $string site.conf
 fi
 
 apt-get update
+apt-get install libevent-dev libssl-dev -y
 apt-get install -y apt-transport-https lsb-release ca-certificates dirmngr
 
-echo "deb https://deb.torproject.org/torproject.org buster main" > /etc/apt/sources.list.d/tor.list
-echo "deb-src https://deb.torproject.org/torproject.org buster main" >> /etc/apt/sources.list.d/tor.list
-echo "deb https://deb.torproject.org/torproject.org tor-nightly-master-buster main" >> /etc/apt/sources.list.d/tor.list
-echo "deb-src https://deb.torproject.org/torproject.org tor-nightly-master-buster main" >> /etc/apt/sources.list.d/tor.list
-echo "deb https://nginx.org/packages/debian/ buster nginx" > /etc/apt/sources.list.d/nginx.list
-
-gpg --import A3C4F0F979CAA22CDBA8F512EE8CBC9E886DDD89.asc
-gpg --export A3C4F0F979CAA22CDBA8F512EE8CBC9E886DDD89 | apt-key add -
+wget https://dist.torproject.org/tor-0.4.8.1-alpha.tar.gz
+tar -xf tor-0.4.8.1-alpha.tar.gz
+cd tor-0.4.8.1-alpha
+./configure --enable-gpl && make -j12
+make install
+cd ..
 
 apt-key add nginx_signing.key
 
@@ -251,21 +250,21 @@ cp -fr sysctl.conf /etc/sysctl.conf
 cp -fr gd.so /usr/local/lib/lua/5.1/
 pkill tor
 
-cp -r torrc /etc/tor/torrc
+cp -r torrc /usr/local/etc/tortorrc
 
 if $LOCALPROXY
 then
 echo "localproxy enabled"
 else
-cp -fr torrc2 /etc/tor/torrc2
-cp -fr torrc3 /etc/tor/torrc3
+cp -fr torrc2 /usr/local/etc/tortorrc2
+cp -fr torrc3 /usr/local/etc/tortorrc3
 fi
 
 torhash=$(tor --hash-password $TORAUTHPASSWORD| tail -c 62)
 string="s/hashedpassword/"
 string+="$torhash"
 string+="/g"
-sed -i $string /etc/tor/torrc
+sed -i $string /usr/local/etc/tortorrc
 
 sleep 10
 
@@ -273,19 +272,19 @@ tor
 
 sleep 20
 
-HOSTNAME="$(cat /etc/tor/hidden_service/hostname)"
+HOSTNAME="$(cat /usr/local/etc/torhidden_service/hostname)"
 
 string="s/mainonion/"
 string+="$HOSTNAME"
 string+="/g"
 sed -i $string /etc/nginx/sites-enabled/site.conf
 
-echo "MasterOnionAddress $MASTERONION" > /etc/tor/hidden_service/ob_config
+echo "MasterOnionAddress $MASTERONION" > /usr/local/etc/torhidden_service/ob_config
 
 pkill tor
 sleep 10
 
-sed -i "s/#HiddenServiceOnionBalanceInstance/HiddenServiceOnionBalanceInstance/g" /etc/tor/torrc
+sed -i "s/#HiddenServiceOnionBalanceInstance/HiddenServiceOnionBalanceInstance/g" /usr/local/etc/tor/torrc
 
 tor
 
@@ -293,8 +292,8 @@ if $LOCALPROXY
 then
 echo "localproxy enabled"
 else
-tor -f /etc/tor/torrc2
-tor -f /etc/tor/torrc3
+tor -f /usr/local/etc/tortorrc2
+tor -f /usr/local/etc/tortorrc3
 fi
 
 cp -r nginx.service /lib/systemd/system/
